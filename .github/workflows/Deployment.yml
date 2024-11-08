@@ -1,0 +1,29 @@
+name: Deployment to GKE 
+
+on:
+  repository_dispatch:
+     types: update-deployment   
+jobs:
+  Deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+        fetch-depth: 0
+
+    - name: Update Image Version
+      id: imgupd
+      uses: mikefarah/yq@master
+      with:
+        cmd: yq eval '.spec.template.spec.containers[0].image = "shiva9921/mywebsite:${{ github.event.client_payload.buildnumber }}"' -i k8s/deployment.yaml
+
+    - name: Update the Build number
+      run: |
+        echo "Updating the Build Number: ${{github.event.client_payload.buildnumber}}"
+
+    - name: Commit & Push changes
+      uses: actions-js/push@master
+      with:
+        github_token: ${{ secrets.API_GITHUB_TOKEN }}
+        message: "Updating the Build Number: ${{github.event.client_payload.buildnumber}}"
